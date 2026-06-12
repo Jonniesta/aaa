@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Daily ABA Data Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">Single-person daily tracker</p>
+      <h1>Daily ABA Data Tracker</h1>
+      <p class="subtitle">Track independent/prompted responses, +/- trials, emotions, DTT, teacher targets, specials, and notes.</p>
+    </div>
+    <div class="header-actions">
+      <button id="printBtn" class="secondary">Print</button>
+      <button id="exportCsvBtn" class="secondary">Export CSV</button>
+      <button id="exportJsonBtn" class="secondary">Export JSON</button>
+      <button id="resetBtn" class="danger">Reset Day</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="card client-card">
+      <h2>Session Info</h2>
+      <div class="grid four">
+        <label>Client <input id="client" value="JMFR" /></label>
+        <label>Date <input id="date" type="date" /></label>
+        <label>Therapist <input id="therapist" value="Jonny" /></label>
+        <label>Location <input id="location" placeholder="School, home, community..." /></label>
+      </div>
+    </section>
+
+    <section class="dashboard">
+      <div class="metric"><span id="totalIndependent">0</span><p>Independent</p></div>
+      <div class="metric"><span id="totalPrompted">0</span><p>Prompted</p></div>
+      <div class="metric"><span id="trialAccuracy">0%</span><p>Trial Accuracy</p></div>
+      <div class="metric"><span id="completionCount">0</span><p>Completed Fields</p></div>
+    </section>
+
+    <section class="card">
+      <div class="section-title"><h2>Tally Targets</h2><p>Use + buttons to count independent and prompted responses.</p></div>
+      <div id="tallyTargets" class="target-list"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-title"><h2>Trial Targets</h2><p>Record five trials with + / - dropdowns.</p></div>
+      <div id="trialTargets" class="target-list"></div>
+    </section>
+
+    <section class="card two-col">
+      <div>
+        <div class="section-title"><h2>Communicating Emotions</h2><p>Capture emotion and reason.</p></div>
+        <label>Communicated Emotion 1 <input id="emotion1" placeholder="Example: frustrated" /></label>
+        <label>Communicated Why 1 <textarea id="why1" placeholder="Describe why..."></textarea></label>
+        <label>Communicated Emotion 2 <input id="emotion2" /></label>
+        <label>Communicated Why 2 <textarea id="why2"></textarea></label>
+      </div>
+      <div>
+        <div class="section-title"><h2>Specials / Group Instructions</h2></div>
+        <label>Specials Name <input id="specialsName" /></label>
+        <label>Duration Before Break/Leave <input id="specialsDuration" placeholder="Example: 25 minutes" /></label>
+        <label>Tolerated Aversive Sounds <select id="aversiveSounds"><option></option><option>+</option><option>-</option><option>N/A</option></select></label>
+        <div class="counter-row compact"><span>Group Instructions</span><button data-counter="groupIndependent" data-delta="-1">−</button><strong id="groupIndependent">0</strong><button data-counter="groupIndependent" data-delta="1">+</button><em>Independent</em><button data-counter="groupPrompted" data-delta="-1">−</button><strong id="groupPrompted">0</strong><button data-counter="groupPrompted" data-delta="1">+</button><em>Prompted</em></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-title"><h2>Discrete Trial Teaching</h2><p>Score two attempts for each question.</p></div>
+      <div id="dttTargets" class="target-list"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-title"><h2>Teacher Targets</h2><p>Score up to five opportunities.</p></div>
+      <div id="teacherTargets" class="target-list"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-title"><h2>Session Notes</h2></div>
+      <textarea id="notes" class="notes" placeholder="Pairing, antecedents, behavior, intervention, response, parent/teacher communication, etc."></textarea>
+    </section>
+  </main>
+
+  <template id="counterTemplate">
+    <article class="target counter-row">
+      <span class="target-name"></span>
+      <button class="minus-ind" type="button">−</button><strong class="ind-count">0</strong><button class="plus-ind" type="button">+</button><em>Independent</em>
+      <button class="minus-pro" type="button">−</button><strong class="pro-count">0</strong><button class="plus-pro" type="button">+</button><em>Prompted</em>
+    </article>
+  </template>
+
+  <template id="trialTemplate">
+    <article class="target trial-row">
+      <span class="target-name"></span>
+      <select><option></option><option>+</option><option>-</option><option>N/A</option></select>
+      <select><option></option><option>+</option><option>-</option><option>N/A</option></select>
+      <select><option></option><option>+</option><option>-</option><option>N/A</option></select>
+      <select><option></option><option>+</option><option>-</option><option>N/A</option></select>
+      <select><option></option><option>+</option><option>-</option><option>N/A</option></select>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
