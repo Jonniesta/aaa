@@ -1,153 +1,359 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ABA Daily Tracker</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="manifest" href="manifest.json" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ABA Tracker</title>
+
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+
+    <meta name="theme-color" content="#2563eb">
 </head>
+
 <body>
-  <header>
-    <h1>ABA Daily Tracker</h1>
-    <p>Mobile data collection app</p>
-  </header>
 
-  <main>
-    <section class="card">
-      <h2>Session Info</h2>
+<header>
 
-      <label>Client Name</label>
-      <input id="clientName" type="text" placeholder="Client name" />
+    <h1>ABA Tracker</h1>
 
-      <label>Date</label>
-      <input id="sessionDate" type="date" />
+    <p>Daily Session Data Collection</p>
 
-      <label>RBT Name</label>
-      <input id="rbtName" type="text" placeholder="RBT name" />
+</header>
 
-      <button type="button" class="secondary" onclick="saveDefaultRBT()">
-        Save RBT as Default
-      </button>
-    </section>
+<main>
+
+    <!-- SESSION INFO -->
 
     <section class="card">
-      <h2>Tally Targets</h2>
 
-      <div class="target">
-        <span>Follow Directions</span>
-        <button onclick="changeCount('follow', -1)">-</button>
-        <strong id="follow">0</strong>
-        <button onclick="changeCount('follow', 1)">+</button>
-      </div>
+        <h2>Session Information</h2>
 
-      <div class="target">
-        <span>Functional Communication</span>
-        <button onclick="changeCount('communication', -1)">-</button>
-        <strong id="communication">0</strong>
-        <button onclick="changeCount('communication', 1)">+</button>
-      </div>
+        <label for="clientName">
+            Client Name
+        </label>
 
-      <div class="target">
-        <span>Transitions</span>
-        <button onclick="changeCount('transition', -1)">-</button>
-        <strong id="transition">0</strong>
-        <button onclick="changeCount('transition', 1)">+</button>
-      </div>
+        <input
+            id="clientName"
+            type="text"
+            placeholder="Enter client name"
+        >
 
-      <div class="target">
-        <span>Group Instruction</span>
-        <button onclick="changeCount('group', -1)">-</button>
-        <strong id="group">0</strong>
-        <button onclick="changeCount('group', 1)">+</button>
-      </div>
+        <label for="sessionDate">
+            Session Date
+        </label>
+
+        <input
+            id="sessionDate"
+            type="date"
+        >
+
+        <label for="rbtName">
+            Registered Behavior Technician
+        </label>
+
+        <input
+            id="rbtName"
+            type="text"
+            placeholder="Enter your name"
+        >
+
+        <button
+            class="secondary"
+            onclick="saveDefaultRBT()"
+            type="button"
+        >
+            Save as Default
+        </button>
+
     </section>
+
+    <!-- TALLY -->
 
     <section class="card">
-      <h2>Trial Data</h2>
-      <div id="trialList"></div>
 
-      <button class="secondary" onclick="addTrial()">
-        Add Trial
-      </button>
+        <h2>Tally Targets</h2>
+
+        <div class="target">
+
+            <span>Follow Directions</span>
+
+            <button onclick="changeCount('follow',-1)">
+                −
+            </button>
+
+            <strong id="follow">
+                0
+            </strong>
+
+            <button onclick="changeCount('follow',1)">
+                +
+            </button>
+
+        </div>
+
+        <div class="target">
+
+            <span>Functional Communication</span>
+
+            <button onclick="changeCount('communication',-1)">
+                −
+            </button>
+
+            <strong id="communication">
+                0
+            </strong>
+
+            <button onclick="changeCount('communication',1)">
+                +
+            </button>
+
+        </div>
+
+        <div class="target">
+
+            <span>Transitions</span>
+
+            <button onclick="changeCount('transition',-1)">
+                −
+            </button>
+
+            <strong id="transition">
+                0
+            </strong>
+
+            <button onclick="changeCount('transition',1)">
+                +
+            </button>
+
+        </div>
+
+        <div class="target">
+
+            <span>Group Instruction</span>
+
+            <button onclick="changeCount('group',-1)">
+                −
+            </button>
+
+            <strong id="group">
+                0
+            </strong>
+
+            <button onclick="changeCount('group',1)">
+                +
+            </button>
+
+        </div>
+
     </section>
+
+    <!-- TRIALS -->
 
     <section class="card">
-      <h2>DTT Questions</h2>
 
-      <label>Responds to Name</label>
-      <select id="respondsName">
-        <option value="">Select</option>
-        <option value="+">+</option>
-        <option value="-">-</option>
-        <option value="N/A">N/A</option>
-      </select>
+        <div
+            style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+            "
+        >
 
-      <label>Answers WH Question</label>
-      <select id="whQuestion">
-        <option value="">Select</option>
-        <option value="+">+</option>
-        <option value="-">-</option>
-        <option value="N/A">N/A</option>
-      </select>
+            <h2 style="margin:0;">
+                Trial Data
+            </h2>
 
-      <label>Imitates Action</label>
-      <select id="imitatesAction">
-        <option value="">Select</option>
-        <option value="+">+</option>
-        <option value="-">-</option>
-        <option value="N/A">N/A</option>
-      </select>
+            <button
+                class="secondary"
+                onclick="addTrial()"
+                type="button"
+            >
+                + Trial
+            </button>
+
+        </div>
+
+        <div id="trialList"></div>
+
     </section>
+
+    <!-- DTT -->
 
     <section class="card">
-      <h2>Emotion Communication</h2>
 
-      <label>Emotion Identified</label>
-      <select id="emotionIdentified">
-        <option value="">Select</option>
-        <option>Happy</option>
-        <option>Sad</option>
-        <option>Mad</option>
-        <option>Scared</option>
-        <option>Frustrated</option>
-        <option>Excited</option>
-      </select>
+        <h2>DTT Targets</h2>
 
-      <label>Communication Level</label>
-      <select id="communicationLevel">
-        <option value="">Select</option>
-        <option>Independent</option>
-        <option>Prompted</option>
-        <option>Modeled</option>
-        <option>Not observed</option>
-      </select>
+        <label>
+            Responds to Name
+        </label>
+
+        <select id="respondsName">
+
+            <option value="">Select</option>
+            <option>+</option>
+            <option>-</option>
+            <option>N/A</option>
+
+        </select>
+
+        <label>
+            WH Question
+        </label>
+
+        <select id="whQuestion">
+
+            <option value="">Select</option>
+            <option>+</option>
+            <option>-</option>
+            <option>N/A</option>
+
+        </select>
+
+        <label>
+            Imitates Action
+        </label>
+
+        <select id="imitatesAction">
+
+            <option value="">Select</option>
+            <option>+</option>
+            <option>-</option>
+            <option>N/A</option>
+
+        </select>
+
     </section>
+
+    <!-- EMOTIONS -->
 
     <section class="card">
-      <h2>Session Notes</h2>
-      <textarea id="notes" placeholder="Type session notes here..."></textarea>
+
+        <h2>Emotion Communication</h2>
+
+        <label>
+            Emotion
+        </label>
+
+        <select id="emotionIdentified">
+
+            <option value="">Select</option>
+
+            <option>Happy</option>
+            <option>Sad</option>
+            <option>Mad</option>
+            <option>Scared</option>
+            <option>Frustrated</option>
+            <option>Excited</option>
+
+        </select>
+
+        <label>
+            Communication Level
+        </label>
+
+        <select id="communicationLevel">
+
+            <option value="">Select</option>
+
+            <option>Independent</option>
+            <option>Prompted</option>
+            <option>Modeled</option>
+            <option>Not Observed</option>
+
+        </select>
+
     </section>
+
+    <!-- NOTES -->
+
+    <section class="card">
+
+        <h2>Session Notes</h2>
+
+        <textarea
+            id="notes"
+            placeholder="Write notes here..."
+        ></textarea>
+
+    </section>
+
+    <!-- DASHBOARD -->
 
     <section class="card dashboard">
-      <h2>Dashboard</h2>
-      <p>Total Tally Count: <strong id="totalCount">0</strong></p>
-      <p>Trial Accuracy: <strong id="accuracy">0%</strong></p>
-      <p>Saved Sessions: <strong id="savedCount">0</strong></p>
+
+        <h2>Today's Summary</h2>
+
+        <p>
+
+            <span>Total Tally</span>
+
+            <strong id="totalCount">
+                0
+            </strong>
+
+        </p>
+
+        <p>
+
+            <span>Trial Accuracy</span>
+
+            <strong id="accuracy">
+                0%
+            </strong>
+
+        </p>
+
+        <p>
+
+            <span>Saved Sessions</span>
+
+            <strong id="savedCount">
+                0
+            </strong>
+
+        </p>
+
     </section>
 
-    <div class="actions">
-      <button id="saveButton" onclick="saveSession()">Save Session</button>
-      <button onclick="exportCSV()">Export CSV</button>
-      <button onclick="clearForm()" class="danger">Clear</button>
-    </div>
+    <!-- HISTORY -->
 
     <section class="card">
-      <h2>Previous Sessions</h2>
-      <div id="history"></div>
-    </section>
-  </main>
 
-  <script src="script.js"></script>
+        <h2>Saved Sessions</h2>
+
+        <div id="history"></div>
+
+    </section>
+
+</main>
+
+<footer class="actions">
+
+    <button
+        id="saveButton"
+        onclick="saveSession()"
+    >
+        Save Session
+    </button>
+
+    <button
+        onclick="exportCSV()"
+    >
+        Export CSV
+    </button>
+
+    <button
+        class="danger"
+        onclick="clearForm()"
+    >
+        Clear
+    </button>
+
+</footer>
+
+<script src="script.js"></script>
+
 </body>
 </html>
