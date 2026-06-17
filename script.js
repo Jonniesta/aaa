@@ -1,397 +1,182 @@
-let counts = {
-  follow: 0,
-  communication: 0,
-  transition: 0,
-  group: 0
-};
+const tallyTargets = [
+  "Follows individual instructions from teacher",
+  "Follows instructions to stop/wait",
+  "Uses appropriate voice level",
+  "Requests with audible voice",
+  "Requests using full sentence",
+  "Requests permission before leaving area",
+  "Accepts feedback without problem behavior",
+  "Adjusts behavior according to feedback",
+  "Gives attention within 5 seconds",
+  "Transitions preferred to non-preferred",
+  "Initiates non-preferred task after two prompts",
+  "Stays near RBT/BCBA during transitions",
+  "Keeps hands to self during transitions"
+];
 
-let trialNumber = 0;
+const trialTargets = [
+  "Follow 3-step directions",
+  "Blow nose and wash/sanitize",
+  "Remain in line",
+  "Transition from incomplete activity",
+  "Accept no",
+  "Give personal space",
+  "Remain seated 10 minutes",
+  "Communicate when misunderstood",
+  "Observe inappropriate behavior without joining",
+  "Self-advocate with peers",
+  "Resolve peer conflict independently",
+  "Ask for break before behavior",
+  "Choose coping activity during behavior"
+];
+
+const dttTargets = ["Mom's birthday", "Dad's birthday", "Oaklynn's birthday", "Aniyah's birthday", "Address", "Mom's phone number", "Dad's phone number"];
+const teacherTargets = ["Implement behavior reduction strategies", "Learn functions of behavior"];
+
+let state = { tally:{}, trials:{}, dtt:{}, teacher:{}, groupIndependent:0, groupPrompted:0, specialSounds:"" };
 let editingSessionId = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("sessionDate").valueAsDate = new Date();
-
+  buildUI();
   loadDefaultRBT();
   loadHistory();
-  updateDashboard();
-
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js");
-  }
+  updateSummary();
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("./service-worker.js");
 });
 
-function saveDefaultRBT() {
-  const rbtName = document.getElementById("rbtName").value.trim();
+function keyify(text){return text.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");}
 
-  if (!rbtName) {
-    alert("Enter an RBT name first.");
-    return;
-  }
+function buildUI(){
+  const tallyBox = document.getElementById("tallyTargets");
+  tallyBox.innerHTML = tallyTargets.map(name => {
+    const key = keyify(name);
+    state.tally[key] ||= { independent:0, prompted:0 };
+    return `<div class="target-card"><div class="target-name">${name}</div><div class="two-counters">
+      ${counterHTML(`tally.${key}.independent`,"Independent")}
+      ${counterHTML(`tally.${key}.prompted`,"Prompted")}
+    </div></div>`;
+  }).join("");
 
-  localStorage.setItem("defaultRBTName", rbtName);
-  alert("Default RBT saved.");
+  document.getElementById("trialTargets").innerHTML = trialTargets.map(name => trialHTML("trials", name, 5)).join("");
+  document.getElementById("dttTargets").innerHTML = dttTargets.map(name => trialHTML("dtt", name, 2)).join("");
+  document.getElementById("teacherTargets").innerHTML = teacherTargets.map(name => trialHTML("teacher", name, 5)).join("");
 }
 
-function loadDefaultRBT() {
-  const savedRBT = localStorage.getItem("defaultRBTName");
-
-  if (savedRBT) {
-    document.getElementById("rbtName").value = savedRBT;
-  }
+function counterHTML(path,label){
+  return `<div class="mini-counter"><label>${label}</label><div class="counter-row">
+    <span></span><button type="button" onclick="changePathCount('${path}',-1)">−</button>
+    <strong data-count="${path}">0</strong><button type="button" onclick="changePathCount('${path}',1)">+</button>
+  </div></div>`;
 }
 
-function changeCount(id, amount) {
-  counts[id] += amount;
-
-  if (counts[id] < 0) {
-    counts[id] = 0;
-  }
-
-  document.getElementById(id).textContent = counts[id];
-  updateDashboard();
+function trialHTML(group,name,total){
+  const key = keyify(name);
+  state[group][key] ||= Array(total).fill("");
+  return `<div class="target-card"><div class="target-name">${name}</div><div class="trial-grid">
+    ${Array.from({length:total},(_,i)=>`<button type="button" class="trial-pill" data-score="${group}.${key}.${i}" onclick="cycleScore(this)">–</button>`).join("")}
+  </div></div>`;
 }
 
-function addTrial(trialData = null) {
-  trialNumber++;
+function getByPath(path){return path.split('.').reduce((obj,k)=>obj[k],state)}
+function setByPath(path,value){const parts=path.split('.');let obj=state;while(parts.length>1)obj=obj[parts.shift()];obj[parts[0]]=value}
+function changePathCount(path,amount){const next=Math.max(0,(getByPath(path)||0)+amount);setByPath(path,next);document.querySelector(`[data-count="${path}"]`).textContent=next;updateSummary()}
+function changeSimpleCount(id,amount){state[id]=Math.max(0,(state[id]||0)+amount);document.getElementById(id).textContent=state[id];updateSummary()}
 
-  const trialList = document.getElementById("trialList");
-
-  const trial = document.createElement("div");
-  trial.className = "trial";
-
-  trial.innerHTML = `
-    <h3>Trial ${trialNumber}</h3>
-
-    <label>Target</label>
-    <input class="trialTarget" type="text" placeholder="Target skill" value="${trialData?.target || ""}" />
-
-    <div class="trial-row">
-      <div>
-        <label>Result</label>
-        <select class="trialResult" onchange="updateDashboard()">
-          <option value="">Select</option>
-          <option value="+" ${trialData?.result === "+" ? "selected" : ""}>+</option>
-          <option value="-" ${trialData?.result === "-" ? "selected" : ""}>-</option>
-          <option value="N/A" ${trialData?.result === "N/A" ? "selected" : ""}>N/A</option>
-        </select>
-      </div>
-
-      <div>
-        <label>Prompt Level</label>
-        <select class="trialPrompt">
-          <option value="">Select</option>
-          <option ${trialData?.prompt === "Independent" ? "selected" : ""}>Independent</option>
-          <option ${trialData?.prompt === "Gestural" ? "selected" : ""}>Gestural</option>
-          <option ${trialData?.prompt === "Verbal" ? "selected" : ""}>Verbal</option>
-          <option ${trialData?.prompt === "Model" ? "selected" : ""}>Model</option>
-          <option ${trialData?.prompt === "Partial Physical" ? "selected" : ""}>Partial Physical</option>
-          <option ${trialData?.prompt === "Full Physical" ? "selected" : ""}>Full Physical</option>
-        </select>
-      </div>
-    </div>
-
-    <button class="danger" onclick="removeTrial(this)">
-      Remove Trial
-    </button>
-  `;
-
-  trialList.appendChild(trial);
-  updateDashboard();
+function cycleScore(btn){
+  const current = btn.dataset.value || "";
+  const next = current === "" ? "+" : current === "+" ? "-" : current === "-" ? "N/A" : "";
+  btn.dataset.value = next;
+  btn.textContent = next || "–";
+  btn.className = "trial-pill" + (next==="+"?" active plus":next==="-"?" active minus":next==="N/A"?" active na":"");
+  setByPath(btn.dataset.score,next);
+  updateSummary();
 }
 
-function removeTrial(button) {
-  button.parentElement.remove();
-  updateDashboard();
+function setSegment(btn,value){
+  const wrap = btn.parentElement;
+  [...wrap.children].forEach(b=>{b.className=""});
+  btn.className = value==="+"?"active plus":value==="-"?"active minus":"active na";
+  state[wrap.dataset.field]=value;
 }
 
-function collectSessionData() {
-  const trials = Array.from(document.querySelectorAll(".trial")).map(trial => {
-    return {
-      target: trial.querySelector(".trialTarget").value,
-      result: trial.querySelector(".trialResult").value,
-      prompt: trial.querySelector(".trialPrompt").value
-    };
-  });
+function saveDefaultRBT(){
+  const value = document.getElementById("rbtName").value.trim();
+  if(!value) return alert("Enter your RBT name first.");
+  localStorage.setItem("defaultRBTName", value);
+  alert("RBT default saved.");
+}
+function loadDefaultRBT(){document.getElementById("rbtName").value = localStorage.getItem("defaultRBTName") || ""}
+function getSessions(){return JSON.parse(localStorage.getItem("abaSessionsStreamlined")) || []}
 
+function collectSession(){
   return {
     id: editingSessionId || Date.now(),
-    clientName: document.getElementById("clientName").value,
+    clientName: document.getElementById("clientName").value.trim(),
     sessionDate: document.getElementById("sessionDate").value,
-    rbtName: document.getElementById("rbtName").value,
-    counts: { ...counts },
-    trials: trials,
-    dtt: {
-      respondsName: document.getElementById("respondsName").value,
-      whQuestion: document.getElementById("whQuestion").value,
-      imitatesAction: document.getElementById("imitatesAction").value
-    },
-    emotion: {
-      emotionIdentified: document.getElementById("emotionIdentified").value,
-      communicationLevel: document.getElementById("communicationLevel").value
-    },
+    rbtName: document.getElementById("rbtName").value.trim(),
     notes: document.getElementById("notes").value,
+    emotion:{emotion1:emotion1.value,why1:emotionWhy1.value,emotion2:emotion2.value,why2:emotionWhy2.value},
+    special:{name:specialName.value,duration:specialDuration.value,sounds:state.specialSounds},
+    state: JSON.parse(JSON.stringify(state)),
     savedAt: new Date().toISOString()
   };
 }
 
-function saveSession() {
+function saveSession(){
+  const session = collectSession();
+  if(!session.clientName) return alert("Client name is required.");
+  if(!session.sessionDate) return alert("Date is required.");
+  if(!session.rbtName) return alert("RBT name is required.");
   const sessions = getSessions();
-  const session = collectSessionData();
-
-  if (!session.clientName.trim()) {
-    alert("Please enter a client name.");
-    return;
-  }
-
-  if (!session.sessionDate) {
-    alert("Please enter a session date.");
-    return;
-  }
-
-  if (!session.rbtName.trim()) {
-    alert("Please enter an RBT name.");
-    return;
-  }
-
-  if (editingSessionId) {
-    const index = sessions.findIndex(item => item.id === editingSessionId);
-
-    if (index !== -1) {
-      sessions[index] = session;
-      alert("Session updated.");
-    }
-  } else {
-    sessions.push(session);
-    alert("Session saved.");
-  }
-
-  localStorage.setItem("abaSessions", JSON.stringify(sessions));
-
-  editingSessionId = null;
-  document.getElementById("saveButton").textContent = "Save Session";
-
-  loadHistory();
-  updateDashboard();
+  if(editingSessionId){
+    const i = sessions.findIndex(s=>s.id===editingSessionId);
+    if(i>-1) sessions[i]=session;
+    alert("Session updated.");
+  } else { sessions.push(session); alert("Session saved."); }
+  localStorage.setItem("abaSessionsStreamlined", JSON.stringify(sessions));
+  editingSessionId=null; saveButton.textContent="Save"; loadHistory(); updateSummary();
 }
 
-function editSession(id) {
-  const sessions = getSessions();
-  const session = sessions.find(item => item.id === id);
-
-  if (!session) {
-    alert("Session not found.");
-    return;
-  }
-
-  editingSessionId = id;
-
-  document.getElementById("clientName").value = session.clientName || "";
-  document.getElementById("sessionDate").value = session.sessionDate || "";
-  document.getElementById("rbtName").value = session.rbtName || "";
-
-  counts = {
-    follow: session.counts?.follow || 0,
-    communication: session.counts?.communication || 0,
-    transition: session.counts?.transition || 0,
-    group: session.counts?.group || 0
-  };
-
-  Object.keys(counts).forEach(key => {
-    document.getElementById(key).textContent = counts[key];
-  });
-
-  document.getElementById("respondsName").value = session.dtt?.respondsName || "";
-  document.getElementById("whQuestion").value = session.dtt?.whQuestion || "";
-  document.getElementById("imitatesAction").value = session.dtt?.imitatesAction || "";
-
-  document.getElementById("emotionIdentified").value =
-    session.emotion?.emotionIdentified || "";
-
-  document.getElementById("communicationLevel").value =
-    session.emotion?.communicationLevel || "";
-
-  document.getElementById("notes").value = session.notes || "";
-
-  document.getElementById("trialList").innerHTML = "";
-  trialNumber = 0;
-
-  if (session.trials && session.trials.length > 0) {
-    session.trials.forEach(trial => {
-      addTrial(trial);
-    });
-  }
-
-  document.getElementById("saveButton").textContent = "Update Session";
-
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth"
-  });
-
-  updateDashboard();
+function editSession(id){
+  const session = getSessions().find(s=>s.id===id); if(!session) return;
+  editingSessionId=id; clientName.value=session.clientName||""; sessionDate.value=session.sessionDate||""; rbtName.value=session.rbtName||""; notes.value=session.notes||"";
+  emotion1.value=session.emotion?.emotion1||""; emotionWhy1.value=session.emotion?.why1||""; emotion2.value=session.emotion?.emotion2||""; emotionWhy2.value=session.emotion?.why2||"";
+  specialName.value=session.special?.name||""; specialDuration.value=session.special?.duration||"";
+  state = session.state || state; buildUI(); hydrateUI(); saveButton.textContent="Update"; window.scrollTo({top:0,behavior:"smooth"}); updateSummary();
 }
 
-function getSessions() {
-  return JSON.parse(localStorage.getItem("abaSessions")) || [];
+function hydrateUI(){
+  document.querySelectorAll("[data-count]").forEach(el=>el.textContent=getByPath(el.dataset.count)||0);
+  document.getElementById("groupIndependent").textContent=state.groupIndependent||0;
+  document.getElementById("groupPrompted").textContent=state.groupPrompted||0;
+  document.querySelectorAll(".trial-pill").forEach(btn=>{ const v=getByPath(btn.dataset.score)||""; btn.dataset.value=v; btn.textContent=v||"–"; btn.className="trial-pill"+(v==="+"?" active plus":v==="-"?" active minus":v==="N/A"?" active na":""); });
+  const seg=document.querySelector('[data-field="specialSounds"]'); [...seg.children].forEach(b=>b.className=""); if(state.specialSounds){ const btn=[...seg.children].find(b=>b.textContent===state.specialSounds); if(btn) btn.className=state.specialSounds==="+"?"active plus":state.specialSounds==="-"?"active minus":"active na"; }
 }
 
-function loadHistory() {
-  const sessions = getSessions();
-  const history = document.getElementById("history");
-
-  history.innerHTML = "";
-
-  if (sessions.length === 0) {
-    history.innerHTML = "<p>No sessions saved yet.</p>";
-    return;
-  }
-
-  sessions
-    .slice()
-    .reverse()
-    .forEach(session => {
-      const item = document.createElement("div");
-      item.className = "history-item";
-
-      item.innerHTML = `
-        <strong>${session.clientName || "Unnamed Client"}</strong><br>
-        Date: ${session.sessionDate || "No date"}<br>
-        RBT: ${session.rbtName || "No RBT"}<br>
-        Trials: ${session.trials?.length || 0}<br>
-
-        <div class="history-buttons">
-          <button onclick="editSession(${session.id})">
-            Edit
-          </button>
-
-          <button onclick="deleteSession(${session.id})" class="danger">
-            Delete
-          </button>
-        </div>
-      `;
-
-      history.appendChild(item);
-    });
-
-  updateDashboard();
+function deleteSession(id){ if(!confirm("Delete this session?")) return; localStorage.setItem("abaSessionsStreamlined", JSON.stringify(getSessions().filter(s=>s.id!==id))); loadHistory(); updateSummary(); }
+function loadHistory(){
+  const sessions = getSessions(); savedCount.textContent=sessions.length;
+  history.innerHTML = sessions.length ? sessions.slice().reverse().map(s=>`<div class="history-item"><div class="history-top"><div><div class="history-title">${s.clientName||"Unnamed"}</div><div class="history-meta">${s.sessionDate||"No date"} • ${s.rbtName||"No RBT"}</div></div></div><div class="history-buttons"><button type="button" onclick="editSession(${s.id})">Edit</button><button type="button" class="danger" onclick="deleteSession(${s.id})">Delete</button></div></div>`).join("") : "<p>No saved sessions yet.</p>";
 }
 
-function deleteSession(id) {
-  if (!confirm("Delete this saved session?")) {
-    return;
-  }
-
-  const sessions = getSessions().filter(session => session.id !== id);
-
-  localStorage.setItem("abaSessions", JSON.stringify(sessions));
-
-  if (editingSessionId === id) {
-    clearForm(false);
-  }
-
-  loadHistory();
-  updateDashboard();
+function updateSummary(){
+  let total = (state.groupIndependent||0)+(state.groupPrompted||0);
+  Object.values(state.tally||{}).forEach(v=>{total+=(v.independent||0)+(v.prompted||0)}); totalCount.textContent=total;
+  const scores = [...Object.values(state.trials||{}).flat(), ...Object.values(state.dtt||{}).flat(), ...Object.values(state.teacher||{}).flat()].filter(v=>v==="+"||v==="-");
+  const correct = scores.filter(v=>v==="+").length; trialAccuracy.textContent = scores.length ? Math.round(correct/scores.length*100)+"%" : "0%";
+  savedCount.textContent=getSessions().length;
 }
 
-function updateDashboard() {
-  const total =
-    counts.follow +
-    counts.communication +
-    counts.transition +
-    counts.group;
-
-  document.getElementById("totalCount").textContent = total;
-
-  const results = Array.from(document.querySelectorAll(".trialResult"))
-    .map(select => select.value)
-    .filter(value => value === "+" || value === "-");
-
-  const correct = results.filter(value => value === "+").length;
-
-  const accuracy = results.length
-    ? Math.round((correct / results.length) * 100)
-    : 0;
-
-  document.getElementById("accuracy").textContent = accuracy + "%";
-
-  document.getElementById("savedCount").textContent = getSessions().length;
+function clearForm(){
+  if(!confirm("Clear current form? Saved sessions stay saved.")) return;
+  editingSessionId=null; document.querySelectorAll("input, textarea").forEach(el=>el.value=""); sessionDate.valueAsDate=new Date(); loadDefaultRBT();
+  state={tally:{},trials:{},dtt:{},teacher:{},groupIndependent:0,groupPrompted:0,specialSounds:""}; buildUI(); hydrateUI(); saveButton.textContent="Save"; updateSummary();
 }
 
-function exportCSV() {
-  const sessions = getSessions();
-
-  if (sessions.length === 0) {
-    alert("No sessions to export.");
-    return;
-  }
-
-  let csv =
-    "Client,Date,RBT,Follow Directions,Communication,Transitions,Group Instruction,Trial Count,Notes\n";
-
-  sessions.forEach(session => {
-    csv += [
-      cleanCSV(session.clientName),
-      cleanCSV(session.sessionDate),
-      cleanCSV(session.rbtName),
-      session.counts?.follow || 0,
-      session.counts?.communication || 0,
-      session.counts?.transition || 0,
-      session.counts?.group || 0,
-      session.trials?.length || 0,
-      cleanCSV(session.notes)
-    ].join(",") + "\n";
-  });
-
-  const blob = new Blob([csv], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "aba-sessions.csv";
-  link.click();
-
-  URL.revokeObjectURL(url);
-}
-
-function cleanCSV(value) {
-  const text = value || "";
-  return `"${text.replace(/"/g, '""')}"`;
-}
-
-function clearForm(ask = true) {
-  if (ask && !confirm("Clear current form? Saved sessions will stay.")) {
-    return;
-  }
-
-  editingSessionId = null;
-  document.getElementById("saveButton").textContent = "Save Session";
-
-  document.getElementById("clientName").value = "";
-  document.getElementById("sessionDate").valueAsDate = new Date();
-
-  loadDefaultRBT();
-
-  document.getElementById("notes").value = "";
-
-  document.getElementById("respondsName").value = "";
-  document.getElementById("whQuestion").value = "";
-  document.getElementById("imitatesAction").value = "";
-  document.getElementById("emotionIdentified").value = "";
-  document.getElementById("communicationLevel").value = "";
-
-  counts = {
-    follow: 0,
-    communication: 0,
-    transition: 0,
-    group: 0
-  };
-
-  Object.keys(counts).forEach(id => {
-    document.getElementById(id).textContent = "0";
-  });
-
-  document.getElementById("trialList").innerHTML = "";
-  trialNumber = 0;
-
-  updateDashboard();
+function exportCSV(){
+  const sessions=getSessions(); if(!sessions.length) return alert("No sessions to export.");
+  let csv="Client,Date,RBT,Total Count,Accuracy,Notes\n";
+  sessions.forEach(s=>{ const old=state; state=s.state; updateSummary(); const total=totalCount.textContent, acc=trialAccuracy.textContent; state=old; csv += [s.clientName,s.sessionDate,s.rbtName,total,acc,s.notes].map(v=>`"${String(v||"").replace(/"/g,'""')}"`).join(",")+"\n"; });
+  const blob=new Blob([csv],{type:"text/csv"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="aba-tracker-sessions.csv"; a.click(); URL.revokeObjectURL(url); updateSummary();
 }
